@@ -3,7 +3,7 @@ numpy==1.26.4
 pandas
 matplotlib
 seaborn
-opencv-python-headless
+opencv-python-headless==4.11.0.86
 scikit-learn
 tensorflow
 plotly
