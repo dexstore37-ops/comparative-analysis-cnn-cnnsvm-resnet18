@@ -1,0 +1,6 @@
+/workspace/TA/Dataset/
+Dataset/
+data/
+.venv/
+__pycache__/
+.ipynb_checkpoints/
