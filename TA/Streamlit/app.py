@@ -721,61 +721,81 @@ with st.container():
         
         st.write("---")
         
-        # Tombol prediksi komparatif
-        if st.button("🚀 Jalankan Analisis Komparatif", key="upload_button", use_container_width=True):
-            # Preprocess uploaded image
+        st.write("---")
+        st.markdown("### 🔍 Pilih Arsitektur Model untuk Inferensi")
+        st.info("💡 Pilih salah satu model di bawah ini. Memilih model baru akan otomatis menonaktifkan model sebelumnya demi menjaga stabilitas RAM server.")
+        
+        # Membuat 3 kolom untuk tombol pilihan model
+        btn_col1, btn_col2, btn_col3 = st.columns(3)
+        
+        model_colors = {"CNN": "#2980b9", "CNN-SVM": "#d35400", "ResNet18": "#27ae60"}
+        model_info = {
+            "CNN": {"desc": "Custom CNN", "type": "🔵 CNN Klasik"},
+            "CNN-SVM": {"desc": "CNN + SVM Classifier", "type": "🟠 Hybrid CNN-SVM"},
+            "ResNet18": {"desc": "Transfer Learning", "type": "🟢 ResNet18"}
+        }
+
+        # Inisialisasi variabel hasil
+        target_model = None
+
+        with btn_col1:
+            if st.button("🔵 Jalankan CNN Klasik", use_container_width=True):
+                target_model = "CNN"
+                
+        with btn_col2:
+            if st.button("🟠 Jalankan Hybrid CNN-SVM", use_container_width=True):
+                target_model = "CNN-SVM"
+                
+        with btn_col3:
+            if st.button("🟢 Jalankan ResNet18", use_container_width=True):
+                target_model = "ResNet18"
+
+        # Proses inferensi on-demand berdasarkan tombol yang aktif
+        if target_model is not None:
+            # Pemicu pembersihan sesi sebelum memuat model baru
+            tf.keras.backend.clear_session()
+            gc.collect()
+            
             image_array = preprocess_image_for_model(raw_image)
             
-            st.markdown("### 📊 Hasil Perbandingan Klasifikasi Arsitektur")
-            col1, col2, col3 = st.columns(3)
-            columns_list = [col1, col2, col3]
-            model_colors = {"CNN": "#2980b9", "CNN-SVM": "#d35400", "ResNet18": "#27ae60"}
-            model_info = {
-                "CNN": {"desc": "Custom CNN", "type": "🔵 CNN Klasik"},
-                "CNN-SVM": {"desc": "CNN + SVM Classifier", "type": "🟠 Hybrid CNN-SVM"},
-                "ResNet18": {"desc": "Transfer Learning", "type": "🟢 ResNet18"}
-            }
-            
-            # Eksekusi Model 1: CNN
-            with st.spinner("⏳ Memuat & Memproses Model CNN..."):
+            with st.spinner(f"⏳ Mengaktifkan & memproses gambar pada {target_model}..."):
+                # Muat model secara lokal dan spesifik
                 local_models, _ = load_models()
-                if "CNN" in local_models:
-                    probs, pred_idx, confidence, label = predict_with_model(local_models["CNN"], image_array, "CNN")
-                    with columns_list[0]:
-                        st.markdown(f'<div class="model-card cnn"><h3>{model_info["CNN"]["type"]}</h3><p><strong>Arsitektur:</strong> {model_info["CNN"]["desc"]}</p></div>', unsafe_allow_html=True)
-                        st.metric("Prediksi Aktivitas", label, delta=f"{confidence:.1f}%")
-                        st.plotly_chart(create_confidence_chart(probs, "CNN", model_colors["CNN"]), use_container_width=True)
-                del local_models
-                gc.collect()
-                tf.keras.backend.clear_session()
-
-            # Eksekusi Model 2: CNN-SVM
-            with st.spinner("⏳ Memuat & Memproses Model CNN-SVM..."):
-                local_models, _ = load_models()
-                if "CNN-SVM" in local_models:
-                    probs, pred_idx, confidence, label = predict_with_model(local_models["CNN-SVM"], image_array, "CNN-SVM")
-                    with columns_list[1]:
-                        st.markdown(f'<div class="model-card hybrid"><h3>{model_info["CNN-SVM"]["type"]}</h3><p><strong>Arsitektur:</strong> {model_info["CNN-SVM"]["desc"]}</p></div>', unsafe_allow_html=True)
-                        st.metric("Prediksi Aktivitas", label, delta=f"{confidence:.1f}%")
-                        st.plotly_chart(create_confidence_chart(probs, "CNN-SVM", model_colors["CNN-SVM"]), use_container_width=True)
-                del local_models
-                gc.collect()
-                tf.keras.backend.clear_session()
-
-            # Eksekusi Model 3: ResNet18
-            with st.spinner("⏳ Memuat & Memproses Model ResNet18..."):
-                local_models, _ = load_models()
-                if "ResNet18" in local_models:
-                    probs, pred_idx, confidence, label = predict_with_model(local_models["ResNet18"], image_array, "ResNet18")
-                    with columns_list[2]:
-                        st.markdown(f'<div class="model-card resnet"><h3>{model_info["ResNet18"]["type"]}</h3><p><strong>Arsitektur:</strong> {model_info["ResNet18"]["desc"]}</p></div>', unsafe_allow_html=True)
-                        st.metric("Prediksi Aktivitas", label, delta=f"{confidence:.1f}%")
-                        st.plotly_chart(create_confidence_chart(probs, "ResNet18", model_colors["ResNet18"]), use_container_width=True)
-                del local_models
-                gc.collect()
-                tf.keras.backend.clear_session()
                 
-            st.success("✅ Seluruh Analisis Komparatif Selesai!")
+                if target_model in local_models:
+                    probs, pred_idx, confidence, label = predict_with_model(
+                        local_models[target_model], image_array, target_model
+                    )
+                    
+                    st.success(f"✅ Inferensi {target_model} Selesai!")
+                    
+                    # Tampilkan hasil dalam layout card terfokus
+                    st.markdown(f"### 📊 Hasil Analisis: {model_info[target_model]['type']}")
+                    
+                    card_col, chart_col = st.columns([1, 2])
+                    
+                    with card_col:
+                        st.markdown(f"""
+                        <div class="model-card {target_model.lower().replace('-', '')}">
+                            <h3>{model_info[target_model]['type']}</h3>
+                            <p><strong>Arsitektur:</strong> {model_info[target_model]['desc']}</p>
+                            <p><strong>Status Memori:</strong> Terisolasi Aktif</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        st.metric("Prediksi Aktivitas", label, delta=f"{confidence:.1f}%")
+                        
+                    with chart_col:
+                        st.plotly_chart(
+                            create_confidence_chart(probs, target_model, model_colors[target_model]), 
+                            use_container_width=True
+                        )
+                else:
+                    st.error(f"❌ Berkas model {target_model} gagal dimuat dari folder proyek.")
+            
+            # Paksa penghancuran objek model dari RAM sesaat setelah rendering output selesai
+            del local_models
+            tf.keras.backend.clear_session()
+            gc.collect()
     
     else:
         st.info("💡 Silakan unggah file gambar berformat `.jpg` atau `.jpeg` untuk melihat hasil analisis komparatif 3 model penelitian ini.")
