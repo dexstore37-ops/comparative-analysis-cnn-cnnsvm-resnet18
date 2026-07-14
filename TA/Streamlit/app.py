@@ -21,18 +21,39 @@ import joblib
 
 import glob
 
+import glob
+
 def combine_split_files(base_path):
-    """Menggabungkan berkas pecahan .part_* menjadi berkas asli jika belum ada."""
-    if not os.path.exists(base_path):
-        # Cari semua pecahan seperti base_path.part_aa, part_ab, dst.
-        parts = sorted(glob.glob(f"{base_path}.part_*"))
-        if parts:
-            print(f"Menggabungkan {len(parts)} bagian untuk {base_path}...")
-            with open(base_path, 'wb') as output_file:
-                for part in parts:
-                    with open(part, 'rb') as input_file:
-                        output_file.write(input_file.read())
-            print(f"✓ {base_path} berhasil digabungkan.")
+    """Menggabungkan berkas pecahan .part_* menjadi berkas asli dengan efisien memori.
+    Menggunakan chunked streaming agar tidak memakan RAM kontainer Railway."""
+    # Flag penanda bahwa proses penggabungan di sesi ini sudah selesai dilakukan
+    done_flag = f"{base_path}.combined_done"
+    
+    if os.path.exists(base_path) and os.path.exists(done_flag):
+        return # Berkas sudah utuh dan valid, langsung lewati proses
+        
+    parts = sorted(glob.glob(f"{base_path}.part_*"))
+    if parts:
+        print(f"Menggabungkan {len(parts)} bagian untuk {base_path} (Stream Mode)...")
+        # Hapus berkas rusak/lama jika ada demi keamanan
+        if os.path.exists(base_path):
+            try: os.remove(base_path)
+            except: pass
+            
+        with open(base_path, 'wb') as output_file:
+            for part in parts:
+                with open(part, 'rb') as input_file:
+                    # Baca per 4MB (bukan sekaligus) agar RAM tetap rendah
+                    while True:
+                        chunk = input_file.read(4 * 1024 * 1024) 
+                        if not chunk:
+                            break
+                        output_file.write(chunk)
+                        
+        # Buat berkas flag penanda sukses
+        with open(done_flag, 'w') as f:
+            f.write("done")
+        print(f"✓ {base_path} berhasil digabungkan dengan aman.")
 
 # Jalankan penggabungan otomatis untuk semua model sebelum load_models() dipanggil
 combine_split_files("TA/CNN_bestmodel/best_cnn_final.keras")
