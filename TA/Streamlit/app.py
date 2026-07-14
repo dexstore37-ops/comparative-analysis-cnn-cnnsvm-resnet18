@@ -658,7 +658,7 @@ def create_confidence_chart(probabilities, model_name, color):
 # ==============================================================================
 
 # Load semua model saat startup
-models, model_status = load_models()
+# models, model_status = load_models()
 
 # Check if any model failed to load and display warning
 models_available = [name for name, status in model_status.items() if status["loaded"]]
@@ -722,52 +722,61 @@ with st.container():
         st.write("---")
         
         # Tombol prediksi komparatif
+        # GANTI DENGAN KODE INI DI BAWAH HIERARKI st.button:
         if st.button("🚀 Jalankan Analisis Komparatif", key="upload_button", use_container_width=True):
-            if len(models_available) == 0:
-                st.error("❌ Tidak ada model yang berhasil dimuat. Silakan periksa path ke model di setiap folder.")
-            else:
-                with st.spinner("⏳ Memproses gambar secara simultan pada ketiga arsitektur model..."):
-                    # Preprocess uploaded image
-                    image_array = preprocess_image_for_model(raw_image)
-                    
-                    # Run inference pada semua model
-                    results = run_inference_on_all_models(models, image_array)
-                    
-                    st.success("✅ Inference selesai! Hasil ditampilkan di bawah:")
-                    
-                    # Display comparative results dalam 3 kolom
-                    st.markdown("### 📊 Hasil Perbandingan Klasifikasi Arsitektur")
-                    
-                    col1, col2, col3 = st.columns(3)
-                    columns_list = [col1, col2, col3]
-                    model_colors = {"CNN": "#2980b9", "CNN-SVM": "#d35400", "ResNet18": "#27ae60"}
-                    model_info = {
-                        "CNN": {"desc": "Custom CNN", "type": "🔵 CNN Klasik"},
-                        "CNN-SVM": {"desc": "CNN + SVM Classifier", "type": "🟠 Hybrid CNN-SVM"},
-                        "ResNet18": {"desc": "Transfer Learning", "type": "🟢 ResNet18"}
-                    }
-                    
-                    for i, (model_name, result) in enumerate(results.items()):
-                        if model_name not in models_available:
-                            continue
-                        
-                        with columns_list[i]:
-                            model_type = model_info[model_name]["type"]
-                            model_desc = model_info[model_name]["desc"]
-                            
-                            if result["label"] is not None:
-                                st.markdown(f"""
-                                <div class="model-card {'cnn' if i==0 else 'hybrid' if i==1 else 'resnet'}">
-                                    <h3>{model_type}</h3>
-                                    <p><strong>Arsitektur:</strong> {model_desc}</p>
-                                    <p><strong>Input:</strong> 224×224×3</p>
-                                </div>
-                                """, unsafe_allow_html=True)
-                                st.metric("Prediksi Aktivitas", result["label"], delta=f"{result['confidence']:.1f}%")
-                                st.plotly_chart(create_confidence_chart(result["probabilities"], model_name, model_colors[model_name]), use_container_width=True)
-                            else:
-                                st.error(f"Gagal menjalankan inferensi pada {model_name}")
-    
+            # Preprocess uploaded image
+            image_array = preprocess_image_for_model(raw_image)
+            
+            st.markdown("### 📊 Hasil Perbandingan Klasifikasi Arsitektur")
+            col1, col2, col3 = st.columns(3)
+            columns_list = [col1, col2, col3]
+            model_colors = {"CNN": "#2980b9", "CNN-SVM": "#d35400", "ResNet18": "#27ae60"}
+            model_info = {
+                "CNN": {"desc": "Custom CNN", "type": "🔵 CNN Klasik"},
+                "CNN-SVM": {"desc": "CNN + SVM Classifier", "type": "🟠 Hybrid CNN-SVM"},
+                "ResNet18": {"desc": "Transfer Learning", "type": "🟢 ResNet18"}
+            }
+            
+            # Eksekusi Model 1: CNN
+            with st.spinner("⏳ Memuat & Memproses Model CNN..."):
+                local_models, _ = load_models()
+                if "CNN" in local_models:
+                    probs, pred_idx, confidence, label = predict_with_model(local_models["CNN"], image_array, "CNN")
+                    with columns_list[0]:
+                        st.markdown(f'<div class="model-card cnn"><h3>{model_info["CNN"]["type"]}</h3><p><strong>Arsitektur:</strong> {model_info["CNN"]["desc"]}</p></div>', unsafe_allow_html=True)
+                        st.metric("Prediksi Aktivitas", label, delta=f"{confidence:.1f}%")
+                        st.plotly_chart(create_confidence_chart(probs, "CNN", model_colors["CNN"]), use_container_width=True)
+                del local_models
+                gc.collect()
+                tf.keras.backend.clear_session()
+
+            # Eksekusi Model 2: CNN-SVM
+            with st.spinner("⏳ Memuat & Memproses Model CNN-SVM..."):
+                local_models, _ = load_models()
+                if "CNN-SVM" in local_models:
+                    probs, pred_idx, confidence, label = predict_with_model(local_models["CNN-SVM"], image_array, "CNN-SVM")
+                    with columns_list[1]:
+                        st.markdown(f'<div class="model-card hybrid"><h3>{model_info["CNN-SVM"]["type"]}</h3><p><strong>Arsitektur:</strong> {model_info["CNN-SVM"]["desc"]}</p></div>', unsafe_allow_html=True)
+                        st.metric("Prediksi Aktivitas", label, delta=f"{confidence:.1f}%")
+                        st.plotly_chart(create_confidence_chart(probs, "CNN-SVM", model_colors["CNN-SVM"]), use_container_width=True)
+                del local_models
+                gc.collect()
+                tf.keras.backend.clear_session()
+
+            # Eksekusi Model 3: ResNet18
+            with st.spinner("⏳ Memuat & Memproses Model ResNet18..."):
+                local_models, _ = load_models()
+                if "ResNet18" in local_models:
+                    probs, pred_idx, confidence, label = predict_with_model(local_models["ResNet18"], image_array, "ResNet18")
+                    with columns_list[2]:
+                        st.markdown(f'<div class="model-card resnet"><h3>{model_info["ResNet18"]["type"]}</h3><p><strong>Arsitektur:</strong> {model_info["ResNet18"]["desc"]}</p></div>', unsafe_allow_html=True)
+                        st.metric("Prediksi Aktivitas", label, delta=f"{confidence:.1f}%")
+                        st.plotly_chart(create_confidence_chart(probs, "ResNet18", model_colors["ResNet18"]), use_container_width=True)
+                del local_models
+                gc.collect()
+                tf.keras.backend.clear_session()
+                
+            st.success("✅ Seluruh Analisis Komparatif Selesai!")
     else:
         st.info("💡 Silakan unggah file gambar berformat `.jpg` atau `.jpeg` untuk melihat hasil analisis komparatif 3 model penelitian ini.")
 
