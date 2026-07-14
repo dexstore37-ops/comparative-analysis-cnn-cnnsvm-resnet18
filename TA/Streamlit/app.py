@@ -722,7 +722,6 @@ with st.container():
         st.write("---")
         
         # Tombol prediksi komparatif
-        # GANTI DENGAN KODE INI DI BAWAH HIERARKI st.button:
         if st.button("🚀 Jalankan Analisis Komparatif", key="upload_button", use_container_width=True):
             # Preprocess uploaded image
             image_array = preprocess_image_for_model(raw_image)
@@ -777,6 +776,7 @@ with st.container():
                 tf.keras.backend.clear_session()
                 
             st.success("✅ Seluruh Analisis Komparatif Selesai!")
+    
     else:
         st.info("💡 Silakan unggah file gambar berformat `.jpg` atau `.jpeg` untuk melihat hasil analisis komparatif 3 model penelitian ini.")
 
