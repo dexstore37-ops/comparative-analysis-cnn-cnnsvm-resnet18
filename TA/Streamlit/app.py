@@ -8,20 +8,27 @@ os.environ['CUDA_VISIBLE_DEVICES'] = ''
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 os.environ['TF_XLA_FLAGS'] = '--tf_xla_auto_jit=0'
+
+# --- TAMBAHKAN BLOK KODE OPTIMASI MEMORI CPU DI BAWAH INI ---
+import tensorflow as tf
+# Membatasi internal thread TensorFlow agar tidak membuat banyak klon memori di CPU
+tf.config.threading.set_intra_op_parallelism_threads(1)
+tf.config.threading.set_inter_op_parallelism_threads(1)
+# -----------------------------------------------------------
 import logging
 import tensorflow as tf
 from tensorflow import keras
 logging.getLogger('tensorflow').setLevel(logging.ERROR)
 logging.getLogger('absl').setLevel(logging.ERROR)
 tf.get_logger().setLevel('ERROR')
-import cv2
+import cv2  
 from pathlib import Path
-import pickle
+import pickle   
 import joblib
 
-import glob
 
 import glob
+import gc
 
 def combine_split_files(base_path):
     """Menggabungkan berkas pecahan .part_* menjadi berkas asli dengan efisien memori.
@@ -358,6 +365,9 @@ def load_models():
                 
                 model_status[model_name] = {"loaded": True, "error": None}
                 print(f"✓ Model {model_name} berhasil dimuat dari {model_path}")
+
+                gc.collect()
+                tf.keras.backend.clear_session()
         
         except Exception as e:
             error_msg = str(e)
