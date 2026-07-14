@@ -4,3 +4,9 @@ data/
 .venv/
 __pycache__/
 .ipynb_checkpoints/
+
+# Larang berkas utuh yang besar, biarkan berkas .part_* terunggah
+TA/CNN_bestmodel/best_cnn_final.keras
+TA/CNN-SVM_bestmodel/best_cnn_model.keras
+TA/CNN-SVM_bestmodel/best_svm_model.pkl
+TA/Resnet18_bestmodel/best_resnet18.keras

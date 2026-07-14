@@ -18,6 +18,28 @@ import cv2
 from pathlib import Path
 import pickle
 import joblib
+
+import glob
+
+def combine_split_files(base_path):
+    """Menggabungkan berkas pecahan .part_* menjadi berkas asli jika belum ada."""
+    if not os.path.exists(base_path):
+        # Cari semua pecahan seperti base_path.part_aa, part_ab, dst.
+        parts = sorted(glob.glob(f"{base_path}.part_*"))
+        if parts:
+            print(f"Menggabungkan {len(parts)} bagian untuk {base_path}...")
+            with open(base_path, 'wb') as output_file:
+                for part in parts:
+                    with open(part, 'rb') as input_file:
+                        output_file.write(input_file.read())
+            print(f"✓ {base_path} berhasil digabungkan.")
+
+# Jalankan penggabungan otomatis untuk semua model sebelum load_models() dipanggil
+combine_split_files("TA/CNN_bestmodel/best_cnn_final.keras")
+combine_split_files("TA/CNN-SVM_bestmodel/best_cnn_model.keras")
+combine_split_files("TA/CNN-SVM_bestmodel/best_svm_model.pkl")
+combine_split_files("TA/Resnet18_bestmodel/best_resnet18.keras")
+
 # Compatibility wrapper untuk models saved with older keras initializer config
 @keras.utils.register_keras_serializable(package='Custom', name='GlorotUniform')
 class CompatGlorotUniform(keras.initializers.GlorotUniform):
