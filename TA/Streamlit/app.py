@@ -661,16 +661,16 @@ def create_confidence_chart(probabilities, model_name, color):
 # models, model_status = load_models()
 
 # Check if any model failed to load and display warning
-models_available = [name for name, status in model_status.items() if status["loaded"]]
+# models_available = [name for name, status in model_status.items() if status["loaded"]]
 
-if len(models_available) < len(MODEL_PATHS):
-    st.warning("⚠️ Beberapa model gagal dimuat. Silakan periksa path model.")
-    with st.expander("📋 Detail Status Model"):
-        for model_name, status in model_status.items():
-            if status["loaded"]:
-                st.success(f"✓ {model_name}: Berhasil dimuat")
-            else:
-                st.error(f"✗ {model_name}: {status['error']}")
+# if len(models_available) < len(MODEL_PATHS):
+#     st.warning("⚠️ Beberapa model gagal dimuat. Silakan periksa path model.")
+#     with st.expander("📋 Detail Status Model"):
+#         for model_name, status in model_status.items():
+#             if status["loaded"]:
+#                 st.success(f"✓ {model_name}: Berhasil dimuat")
+#             else:
+#                 st.error(f"✗ {model_name}: {status['error']}")
 
 # Tab Upload Gambar
 st.markdown("### 📤 Upload Gambar")
