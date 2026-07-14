@@ -201,18 +201,17 @@ CLASS_NAMES = [CLASS_MAPPING[i] for i in range(4)]
 # Path ke model-model yang sudah dilatih
 MODEL_PATHS = {
     "CNN": {
-        "model": "/workspace/TA/CNN_bestmodel/best_cnn_final.keras"
+        "model": "TA/CNN_bestmodel/best_cnn_final.keras"
     },
     "CNN-SVM": {
-        "model": "/workspace/TA/CNN-SVM_bestmodel/best_cnn_model.keras",
-        "svm": "/workspace/TA/CNN-SVM_bestmodel/best_svm_model.pkl",
-        "scaler": "/workspace/TA/CNN-SVM_bestmodel/scaler.pkl"
+        "model": "TA/CNN-SVM_bestmodel/best_cnn_model.keras",
+        "svm": "TA/CNN-SVM_bestmodel/best_svm_model.pkl",
+        "scaler": "TA/CNN-SVM_bestmodel/scaler.pkl"
     },
     "ResNet18": {
-        "model": "/workspace/TA/Resnet18_bestmodel/best_resnet18.keras"
+        "model": "TA/Resnet18_bestmodel/best_resnet18.keras"
     }
 }
-
 # Cache untuk menyimpan model yang sudah dimuat
 @st.cache_resource
 def load_models():
