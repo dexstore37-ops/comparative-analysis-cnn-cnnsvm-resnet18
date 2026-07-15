@@ -483,33 +483,27 @@ def predict_with_model(model_container, image_array, model_name="Model"):
                 pass
             
             if svm_model is not None:
-                # Jika ada SVM, gunakan CNN untuk feature extraction + SVM untuk classification
-                # Extract features menggunakan CNN (remove last classification layer)
-                feature_extractor = None
-                if hasattr(cnn_model, 'input') and cnn_model.input is not None:
+                # --- VERSI OPTIMASI CEPAT UNTUK HYBRID CNN-SVM ---
+                # Langsung gunakan model Keras untuk memprediksi fitur tanpa membuat Sequential baru
+                try:
+                    # Alternatif 1: Coba ambil layer Flatten berdasarkan nama/tipe secara instan
                     flatten_layer = None
                     for layer in cnn_model.layers:
-                        if layer.name == 'flatten_features' or layer.__class__.__name__ == 'Flatten':
+                        if 'flatten' in layer.name.lower():
                             flatten_layer = layer
                             break
+                    
                     if flatten_layer is not None:
-                        feature_extractor = keras.Model(
-                            inputs=cnn_model.input,
-                            outputs=flatten_layer.output
-                        )
-                if feature_extractor is None:
-                    # rebuild sequential extractor until flatten layer
-                    seq_layers = []
-                    for layer in cnn_model.layers:
-                        seq_layers.append(layer)
-                        if layer.name == 'flatten_features' or layer.__class__.__name__ == 'Flatten':
-                            break
-                    feature_extractor = keras.Sequential(seq_layers)
-                    try:
-                        feature_extractor.build((None, 224, 224, 3))
-                    except Exception:
-                        pass
-                features = feature_extractor.predict(image_array, verbose=0, batch_size=1)
+                        feature_extractor = keras.Model(inputs=cnn_model.input, outputs=flatten_layer.output)
+                        features = feature_extractor.predict(image_array, verbose=0, batch_size=1)
+                    else:
+                        # Alternatif 2: Jika tidak ketemu nama layer, potong langsung ke layer penengah (misal indeks -2)
+                        feature_extractor = keras.Model(inputs=cnn_model.input, outputs=cnn_model.layers[-2].output)
+                        features = feature_extractor.predict(image_array, verbose=0, batch_size=1)
+                except Exception:
+                    # Fallback jika model adalah Sequential sederhana: jalankan prediksi biasa hingga Flatten
+                    features = cnn_model.predict(image_array, verbose=0)
+
                 features_flat = features.reshape(features.shape[0], -1)
                 
                 # Scale features jika ada scaler
@@ -520,13 +514,11 @@ def predict_with_model(model_container, image_array, model_name="Model"):
                 svm_predictions = svm_model.predict(features_flat)
                 pred_idx = svm_predictions[0]
                 
-                # Dapatkan decision function untuk confidence
+                # Dapatkan decision function untuk confidence score
                 if hasattr(svm_model, 'decision_function'):
                     decision = svm_model.decision_function(features_flat)[0]
-                    # Normalize decision function to pseudo-probabilities
                     probs_percent = np.abs(decision) / np.sum(np.abs(decision)) * 100
                 else:
-                    # Fallback: gunakan uniform distribution
                     probs_percent = np.ones(4) * 25.0
                     probs_percent[pred_idx] = 100 - 75.0
             else:
