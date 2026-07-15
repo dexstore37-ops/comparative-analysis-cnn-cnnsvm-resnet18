@@ -752,48 +752,89 @@ with st.container():
 
         # Proses inferensi on-demand berdasarkan tombol yang aktif
         if target_model is not None:
-            # Pemicu pembersihan sesi sebelum memuat model baru
             tf.keras.backend.clear_session()
             gc.collect()
             
             image_array = preprocess_image_for_model(raw_image)
             
             with st.spinner(f"⏳ Mengaktifkan & memproses gambar pada {target_model}..."):
-                # Muat model secara lokal dan spesifik
-                local_models, _ = load_models()
-                
-                if target_model in local_models:
-                    probs, pred_idx, confidence, label = predict_with_model(
-                        local_models[target_model], image_array, target_model
-                    )
-                    
-                    st.success(f"✅ Inferensi {target_model} Selesai!")
-                    
-                    # Tampilkan hasil dalam layout card terfokus
-                    st.markdown(f"### 📊 Hasil Analisis: {model_info[target_model]['type']}")
-                    
-                    card_col, chart_col = st.columns([1, 2])
-                    
-                    with card_col:
-                        st.markdown(f"""
-                        <div class="model-card {target_model.lower().replace('-', '')}">
-                            <h3>{model_info[target_model]['type']}</h3>
-                            <p><strong>Arsitektur:</strong> {model_info[target_model]['desc']}</p>
-                            <p><strong>Status Memori:</strong> Terisolasi Aktif</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        st.metric("Prediksi Aktivitas", label, delta=f"{confidence:.1f}%")
-                        
-                    with chart_col:
-                        st.plotly_chart(
-                            create_confidence_chart(probs, target_model, model_colors[target_model]), 
-                            use_container_width=True
+                try:
+                    # ISOLASI RAM: Muat HANYA model yang dipilih oleh user
+                    paths_dict = MODEL_PATHS[target_model]
+                    custom_objects = {
+                        'GlorotUniform': CompatGlorotUniform,
+                        'CompatGlorotUniform': CompatGlorotUniform
+                    }
+                    probs, pred_idx, confidence, label = None, None, None, None
+
+                    if target_model == "CNN":
+                        m = tf.keras.models.load_model(
+                            paths_dict["model"],
+                            compile=False,
+                            custom_objects=custom_objects,
+                            safe_mode=False
                         )
-                else:
-                    st.error(f"❌ Berkas model {target_model} gagal dimuat dari folder proyek.")
+                        probs, pred_idx, confidence, label = predict_with_model(
+                            {"type": "CNN", "model": m}, image_array, "CNN"
+                        )
+                        del m
+
+                    elif target_model == "CNN-SVM":
+                        cnn_m = tf.keras.models.load_model(
+                            paths_dict["model"],
+                            compile=False,
+                            custom_objects=custom_objects,
+                            safe_mode=False
+                        )
+                        svm_m = joblib.load(paths_dict["svm"]) if os.path.exists(paths_dict["svm"]) else None
+                        scaler_m = joblib.load(paths_dict["scaler"]) if os.path.exists(paths_dict["scaler"]) else None
+                        probs, pred_idx, confidence, label = predict_with_model(
+                            {"type": "CNN-SVM", "cnn": cnn_m, "svm": svm_m, "scaler": scaler_m},
+                            image_array,
+                            "CNN-SVM"
+                        )
+                        del cnn_m
+                        del svm_m
+                        del scaler_m
+
+                    elif target_model == "ResNet18":
+                        m = tf.keras.models.load_model(
+                            paths_dict["model"],
+                            compile=False,
+                            custom_objects=custom_objects,
+                            safe_mode=False
+                        )
+                        probs, pred_idx, confidence, label = predict_with_model(
+                            {"type": "ResNet18", "model": m}, image_array, "ResNet18"
+                        )
+                        del m
+
+                    if label is not None:
+                        st.success(f"✅ Inferensi {target_model} Selesai!")
+                        st.markdown(f"### 📊 Hasil Analisis: {model_info[target_model]['type']}")
+                        card_col, chart_col = st.columns([1, 2])
+
+                        with card_col:
+                            st.markdown(
+                                f'<div class="model-card {target_model.lower().replace("-", "")}">'
+                                f'<h3>{model_info[target_model]["type"]}</h3>'
+                                f'<p><strong>Arsitektur:</strong> {model_info[target_model]["desc"]}</p>'
+                                f'</div>',
+                                unsafe_allow_html=True
+                            )
+                            st.metric("Prediksi Aktivitas", label, delta=f"{confidence:.1f}%")
+
+                        with chart_col:
+                            st.plotly_chart(
+                                create_confidence_chart(probs, target_model, model_colors[target_model]),
+                                use_container_width=True
+                            )
+                    else:
+                        st.error(f"❌ Inferensi gagal diproses untuk {target_model}.")
+                except Exception as e:
+                    st.error(f"❌ Gagal memuat komponen model {target_model}: {str(e)}")
             
-            # Paksa penghancuran objek model dari RAM sesaat setelah rendering output selesai
-            del local_models
+            # Pembersihan RAM Total setelah tombol selesai dieksekusi
             tf.keras.backend.clear_session()
             gc.collect()
     
