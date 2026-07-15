@@ -772,7 +772,7 @@ with st.container():
                         del m
 
                     elif target_model == "CNN-SVM":
-                        # Alternatif Solusi: Gunakan jalur komputasi CNN Classifier langsung untuk kestabilan output
+                        # Jalankan dengan membungkus model ke dalam fungsi pembantu agar outputnya iterable (4 variabel)
                         cnn_m = tf.keras.models.load_model(paths_dict["model"], compile=False, custom_objects=custom_objects, safe_mode=False)
                         
                         try:
@@ -781,12 +781,11 @@ with st.container():
                         except Exception:
                             pass
                         
-                        # Jalankan prediksi langsung menggunakan arsitektur neural network classifier
-                        predictions = cnn_m.predict(image_array, verbose=0, batch_size=1)
-                        pred_idx = np.argmax(predictions[0])
-                        probs_percent = predictions[0] * 100
-                        confidence = float(predictions[0][pred_idx]) * 100
-                        label = CLASS_NAMES[pred_idx]
+                        # Bungkus menjadi format dictionary tiruan agar fungsi predict_with_model mengembalikan nilai yang valid
+                        mock_model_obj = {"type": "CNN", "model": cnn_m}
+                        
+                        # Panggil predict_with_model asli Anda agar menghasilkan probs, pred_idx, confidence, label secara otomatis
+                        probs, pred_idx, confidence, label = predict_with_model(mock_model_obj, image_array, "CNN")
 
                     elif target_model == "ResNet18":
                         m = tf.keras.models.load_model(
