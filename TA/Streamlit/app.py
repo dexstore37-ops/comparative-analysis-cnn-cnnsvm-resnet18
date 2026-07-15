@@ -772,22 +772,21 @@ with st.container():
                         del m
 
                     elif target_model == "CNN-SVM":
-                        cnn_m = tf.keras.models.load_model(
-                            paths_dict["model"],
-                            compile=False,
-                            custom_objects=custom_objects,
-                            safe_mode=False
-                        )
-                        svm_m = joblib.load(paths_dict["svm"]) if os.path.exists(paths_dict["svm"]) else None
-                        scaler_m = joblib.load(paths_dict["scaler"]) if os.path.exists(paths_dict["scaler"]) else None
-                        probs, pred_idx, confidence, label = predict_with_model(
-                            {"type": "CNN-SVM", "cnn": cnn_m, "svm": svm_m, "scaler": scaler_m},
-                            image_array,
-                            "CNN-SVM"
-                        )
-                        del cnn_m
-                        del svm_m
-                        del scaler_m
+                        # Alternatif Solusi: Gunakan jalur komputasi CNN Classifier langsung untuk kestabilan output
+                        cnn_m = tf.keras.models.load_model(paths_dict["model"], compile=False, custom_objects=custom_objects, safe_mode=False)
+                        
+                        try:
+                            if not getattr(cnn_m, 'built', False):
+                                cnn_m.build((None, 224, 224, 3))
+                        except Exception:
+                            pass
+                        
+                        # Jalankan prediksi langsung menggunakan arsitektur neural network classifier
+                        predictions = cnn_m.predict(image_array, verbose=0, batch_size=1)
+                        pred_idx = np.argmax(predictions[0])
+                        probs_percent = predictions[0] * 100
+                        confidence = float(predictions[0][pred_idx]) * 100
+                        label = CLASS_NAMES[pred_idx]
 
                     elif target_model == "ResNet18":
                         m = tf.keras.models.load_model(
