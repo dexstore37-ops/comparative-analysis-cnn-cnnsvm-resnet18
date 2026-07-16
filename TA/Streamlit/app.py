@@ -808,7 +808,6 @@ with st.container():
                             st.markdown(
                                 f'<div class="model-card {target_model.lower().replace("-", "")}">'
                                 f'<h3>{model_info[target_model]["type"]}</h3>'
-                                f'<p><strong>Arsitektur:</strong> {model_info[target_model]["desc"]}</p>'
                                 f'</div>',
                                 unsafe_allow_html=True
                             )
